@@ -6,7 +6,8 @@ library(Mcomp)
 library(rlist)
 library(forecTheta)
 library(tictoc)
-cvts
+
+
 SubsetM3 <- list.filter(M3, "MONTHLY" %in% period & n > 50)
 
 SubsetM31 <- list.filter(M3, "MONTHLY" %in% period & n > 48 & "N1876" %in% sn)
@@ -27,7 +28,7 @@ AR <- function(x, h) {
                       ), h = h)
 }
 
-TB <- function(x, h, ...) {
+TB <- function(x, h) {
   forecast(tbats(x), h = h)
 }
 
@@ -66,69 +67,85 @@ SN <- function(x, h) {
 #AutoFunctiona <- c(Auto1,Auto2,Auto3)
 
 # Try to save model and CI ------------------------------------------------
-tic("TBATS")
-AR(y,18)
-toc()
 
-  # Cross Calculate for h and save error ------------------------------------
+# Cross Calculate for h and save error ------------------------------------
 
 tic("Cross Validating All Methods")
 
+
 tic("AR")
-MatrixErrorsAR <- tsCV(y, AR, h = h,
-                       #window = h
-                       )
+MatrixErrorsAR <- Better_CV(y, AR, h = h,
+                            #window = h,
+                            Start = ifelse(length(y) -60 >= 0L, length(y) -60,1L),
+                            Min_Lenght = 24
+)
 toc()
 
 tic("TBATS")
-MatrixErrorsTB <- tsCV(y,TB, h =h, 
-                       #window = h
-                       )
+MatrixErrorsTB <- Better_CV(y, TB, h = h,
+                            #window = h,
+                            Start = ifelse(length(y) -60 >= 0L, length(y) -60,1L),
+                            Min_Lenght = 24
+)
 toc()
 
 tic("ETS")
-MatrixErrorsET <- tsCV(y,ET, h =h, 
-                       #window = h
-                       )
+MatrixErrorsET  <- Better_CV(y, ET, h = h,
+                              #window = h,
+                              Start = ifelse(length(y) -60 >= 0L, length(y) -60,1L),
+                              Min_Lenght = 24
+)
 toc()
 
 tic("Neural Network")
-MatrixErrorsNN <- tsCV(y,NN, h =h, 
-                       #window = h
-                       )
+MatrixErrorsNN <- Better_CV(y, NN, h = h,
+                            #window = h,
+                            Start = ifelse(length(y) -60 >= 0L, length(y) -60,1L),
+                            Min_Lenght = 24
+)
 toc()
 
 tic("Seasonal Ajusted AR")
-MatrixErrorsSA <- tsCV(y,SA, h =h, 
-                       #window = h
-                       )
+MatrixErrorsSA <- Better_CV(y, SA, h = h,
+                            #window = h,
+                            Start = ifelse(length(y) -60 >= 0L, length(y) -60,1L),
+                            Min_Lenght = 24
+)
 toc()
 
 tic("Seasonal Ajusted ETS")
-MatrixErrorsSE <- tsCV(y,SE, h =h, 
-                       #window = h
-                       )
+MatrixErrorsSE <- Better_CV(y, SE, h = h,
+                            #window = h,
+                            Start = ifelse(length(y) -60 >= 0L, length(y) -60,1L),
+                            Min_Lenght = 24
+)
 toc()
 
 tic("Theta")
-MatrixErrorsTH <- tsCV(y,TH, h =h, 
-                       #window = h
-                       )
+MatrixErrorsTH <- Better_CV(y, TH, h = h,
+                            #window = h,
+                            Start = ifelse(length(y) -60 >= 0L, length(y) -60,1L),
+                            Min_Lenght = 24
+)
 toc()
 
 tic("Randow Walk Seaonal")
-MatrixErrorsRW <- tsCV(y,RW, h =h, 
-                       #window = h
-                       )
+MatrixErrorsRW <- Better_CV(y, RW, h = h,
+                            #window = h,
+                            Start = ifelse(length(y) -60 >= 0L, length(y) -60,1L),
+                            Min_Lenght = 24
+)
 toc()
 
 tic("Seaonal Naive")
-MatrixErrorsSN <- tsCV(y,SN, h =h,
-                       #window = h
-                       )
+MatrixErrorsSN <- Better_CV(y, SN, h = h,
+                            #window = h,
+                            Start = ifelse(length(y) -60 >= 0L, length(y) -60,1L),
+                            Min_Lenght = 24
+)
+toc()
 toc()
 
-toc()
 
 #forecast1 <- Auto1(y,h)
 #forecast2 <- Auto2(y,h)
@@ -136,8 +153,27 @@ toc()
 
 # Create an object  with the Time Series, CV Accuracy, Forecast   --------
 
-Index <- rep(1:10000, each = frequency(y), len = length(y))
-Reduced_Importance <- MatrixErrorsSN/sort(Index, decreasing = TRUE)
+xx<- c(1,2,3,4)
+
+map_dbl(xx,as.numeric)
+Index_Example <- rep(1:10000, each = frequency(y), len = length(y))
+
+Index_Example <- Index_Maker(y,12,map_dbl(c(1:1000),sqrt))
+
+Index_Maker <- function(y,Each,Cost_Function = as.numeric) {
+  Rep_Sequence <- 1:((length(y)/Each)+1)
+  Index_Intermediary1 <- rep(Rep_Sequence, each = Each, len = length(y))
+  Index_Intermediary2 <- map_dbl(Index_Intermediary1,Cost_Function)
+  sort(Index_Intermediary2, decreasing = TRUE)
+}
+
+Index_Example <- Index_Maker(y,12)
+
+
+Reduced_Importance <- MatrixErrorsSA/Index_Example
+
+Reduce_Importance <- function(Index,errors) 
+  errors
 
 #Forecasts1<- cbind(
 #  Auto11 = forecast1$mean,

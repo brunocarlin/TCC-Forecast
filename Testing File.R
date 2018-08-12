@@ -176,14 +176,14 @@ CV_Mean_Accuracy <- function(y, error) {
 
 
 
-Better_CV <- function (y, forecastfunction, h = 1, window = NULL,start= NULL, ...) {
+Better_CV <- function (y, forecastfunction, h = 1, window = NULL,Start= 1,Min_Lenght = 0, ...) {
   y <- as.ts(y)
   n <- length(y)
   e <- ts(matrix(NA_real_, nrow = n, ncol = h))
   tsp(e) <- tsp(y)
   for (i in seq_len(n - 1)) {
     fc <- try(suppressWarnings(forecastfunction(subset(y, 
-                                                       start = ifelse(i- start >= 0L, ifelse(is.null(window), 1L, ifelse(i - window >= 
+                                                       start = ifelse(i- Start >= 0L & i- Min_Lenght >= 0L, ifelse(is.null(window), 1L, ifelse(i - window >= 
                                                                                                                           0L, i - window + 1L, stop("small window"))),stop("Too Short")), 
                                                        end = i), h = h, ...)), silent = TRUE)
     if (!is.element("try-error", class(fc))) {
