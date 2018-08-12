@@ -5,13 +5,14 @@ library(tsibble)
 library(Mcomp)
 library(rlist)
 library(forecTheta)
-
+library(tictoc)
 cvts
-SubsetM3 <- list.filter(M3, "MONTHLY" %in% period & n > 48)
+SubsetM3 <- list.filter(M3, "MONTHLY" %in% period & n > 50)
 
-SubsetM31 <- list.filter(M3, "MONTHLY" %in% period & n > 48 & "N1402" %in% sn)
+SubsetM31 <- list.filter(M3, "MONTHLY" %in% period & n > 48 & "N1876" %in% sn)
 
-y <- SubsetM3$N1452$x
+y <- SubsetM3$N1876$x
+y <- tail(y,48)
 test <- SubsetM3$N1452$xx
 h = 18
 
@@ -20,7 +21,10 @@ h = 18
 
 
 AR <- function(x, h) {
-  forecast(auto.arima(x,stepwise=FALSE, approximation=FALSE), h = h)
+  forecast(auto.arima(x,
+                      #stepwise=FALSE,
+                      #approximation=FALSE
+                      ), h = h)
 }
 
 TB <- function(x, h, ...) {
@@ -47,37 +51,104 @@ TH <- function(x, h) {
   forecast(thetaf(x), h = h)
 }
 
+RW <- function(x, h) {
+    rwf(x, drift = TRUE, h = h)
+}
+
+SN <- function(x, h) {
+  forecast(snaive(x), h = h)
+}
 
 
 # Create List with Functions ----------------------------------------------
 
+
 #AutoFunctiona <- c(Auto1,Auto2,Auto3)
 
 # Try to save model and CI ------------------------------------------------
-
+tic("TBATS")
+AR(y,18)
+toc()
 
   # Cross Calculate for h and save error ------------------------------------
 
-MatrixErrors1 <- tsCV(y,TH, h =h, window = h)
-MatrixErrors2 <- tsCV(y,AR, h =h, window = h)
+tic("Cross Validating All Methods")
 
-forecast1 <- Auto1(y,h)
-forecast2 <- Auto2(y,h)
+tic("AR")
+MatrixErrorsAR <- tsCV(y, AR, h = h,
+                       #window = h
+                       )
+toc()
 
-Forecasts1<- cbind(
-  Auto11 = forecast1$mean,
-  Auto22 = forecast2$mean
-)
+tic("TBATS")
+MatrixErrorsTB <- tsCV(y,TB, h =h, 
+                       #window = h
+                       )
+toc()
+
+tic("ETS")
+MatrixErrorsET <- tsCV(y,ET, h =h, 
+                       #window = h
+                       )
+toc()
+
+tic("Neural Network")
+MatrixErrorsNN <- tsCV(y,NN, h =h, 
+                       #window = h
+                       )
+toc()
+
+tic("Seasonal Ajusted AR")
+MatrixErrorsSA <- tsCV(y,SA, h =h, 
+                       #window = h
+                       )
+toc()
+
+tic("Seasonal Ajusted ETS")
+MatrixErrorsSE <- tsCV(y,SE, h =h, 
+                       #window = h
+                       )
+toc()
+
+tic("Theta")
+MatrixErrorsTH <- tsCV(y,TH, h =h, 
+                       #window = h
+                       )
+toc()
+
+tic("Randow Walk Seaonal")
+MatrixErrorsRW <- tsCV(y,RW, h =h, 
+                       #window = h
+                       )
+toc()
+
+tic("Seaonal Naive")
+MatrixErrorsSN <- tsCV(y,SN, h =h,
+                       #window = h
+                       )
+toc()
+
+toc()
+
+#forecast1 <- Auto1(y,h)
+#forecast2 <- Auto2(y,h)
+
+
 # Create an object  with the Time Series, CV Accuracy, Forecast   --------
 
+Index <- rep(1:10000, each = frequency(y), len = length(y))
+Reduced_Importance <- MatrixErrorsSN/sort(Index, decreasing = TRUE)
 
-
+#Forecasts1<- cbind(
+#  Auto11 = forecast1$mean,
+#  Auto22 = forecast2$mean
+#)
 
 
 # "ME,RMSE,MAE,MPE,MAPE,MASE,ACF1" ----------------------------------------
 
-MAPE1<- vapply(MatrixErrors1,mape, y = y,numeric(length(y)))
-MAPE3<- mape(y,MatrixErrors1)
+MAPE1<- vapply(MatrixErrorsSN,mape, y = y,numeric(length(y)))
+MAPE3<- mape(y,MatrixErrorsSN)
 MAPE1 == MAPE3 
 MAPE2<- mape(y,MatrixErrors2)
 
