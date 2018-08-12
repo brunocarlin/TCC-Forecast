@@ -40,6 +40,4 @@ mpe <- function(percenterror) {
   mean(percenterror, na.rm = TRUE)
 }
 
-sapply(MatrixErrors1, rmse)
-
 

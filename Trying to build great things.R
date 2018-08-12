@@ -4,6 +4,7 @@ library(tidyverse)
 library(tsibble)
 library(Mcomp)
 library(rlist)
+library(forecTheta)
 
 cvts
 SubsetM3 <- list.filter(M3, "MONTHLY" %in% period & n > 48)
@@ -18,19 +19,19 @@ h = 18
 
 
 
-A <- function(x, h) {
-  forecast(auto.arima(x), h = h)
+AR <- function(x, h) {
+  forecast(auto.arima(x,stepwise=FALSE, approximation=FALSE), h = h)
 }
 
-T <- function(x, h, ...) {
+TB <- function(x, h, ...) {
   forecast(tbats(x), h = h)
 }
 
-E <- function(x, h) {
+ET <- function(x, h) {
   forecast(ets(x), h = h)
 }
 
-N <- function(x, h) {
+NN <- function(x, h) {
   forecast(nnetar(x), h = h)
 }
 
@@ -42,26 +43,23 @@ SE <- function(x, h) {
   forecast(stlm(y, modelfunction = ets), h = h)
 }
 
-E <- function(x, h) {
+TH <- function(x, h) {
   forecast(thetaf(x), h = h)
 }
 
 
+
 # Create List with Functions ----------------------------------------------
 
-
-AutoFunctiona <- c(Auto1,Auto2,Auto3)
-
-
-
+#AutoFunctiona <- c(Auto1,Auto2,Auto3)
 
 # Try to save model and CI ------------------------------------------------
 
-ForecastModel1 <- auto.arima(y)
-ForecastModel1$model
+
   # Cross Calculate for h and save error ------------------------------------
-MatrixErrors1 <- tsCV(y,N, h =h, window = h)
-MatrixErrors2 <- tsCV(y,Auto3, h =h, window = h)
+
+MatrixErrors1 <- tsCV(y,TH, h =h, window = h)
+MatrixErrors2 <- tsCV(y,AR, h =h, window = h)
 
 forecast1 <- Auto1(y,h)
 forecast2 <- Auto2(y,h)
