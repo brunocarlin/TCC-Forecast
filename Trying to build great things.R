@@ -41,11 +41,11 @@ NN <- function(x, h) {
 }
 
 SA <- function(x, h) {
-  forecast(stlm(y, modelfunction = ar), h = h)
+  forecast(stlm(x, method = "arima"), h = h)
 }
 
 SE <- function(x, h) {
-  forecast(stlm(y, modelfunction = ets), h = h)
+  forecast(stlm(x, method = "ets"), h = h)
 }
 
 TH <- function(x, h) {
