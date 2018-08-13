@@ -60,14 +60,53 @@ SN <- function(x, h) {
   forecast(snaive(x), h = h)
 }
 
-
 # Create List with Functions ----------------------------------------------
 
+Forecast_Functions <- list(
+  "Auto_Arima"      =     AR,
+  "Tbats"           =     TB,
+  "ETS"             =     ET,
+  "Neural_Network"  =     NN,
+  "Seasonal_AR"     =     SA,
+  "Seasonal_ETS"    =     SE,
+  "Thetha"          =     TH,
+  "Randon_Walk"     =     RW,
+  "Seasonal_Naive"  =     SN)
 
-#AutoFunctiona <- c(Auto1,Auto2,Auto3)
-
+length(Forecast_Functions[[1]])                        
+seq_len(length(Forecast_Functions))
 # Try to save model and CI ------------------------------------------------
 
+Execute_Function <- function(
+  y,
+  List_Functions,
+  h = 1,
+  window = NULL,
+  Start = 1,
+  Min_Lenght = 0,
+  ...
+){
+  
+  Number_Functions <- length(List_Functions)
+  MatrixErrors <- vector("list",Number_Functions)
+  for (i in seq_len(Number_Functions)) {
+    
+  }
+  MatrixErrors[[i]] <- Better_CV(
+    y = y,
+    Forecast_Function[[i]],
+    h = h,
+    window = NULL,
+    Start = Start,
+    Min_Lenght = 0,
+    
+)
+  return(MatrixErrors)
+}
+
+OK<- Execute_Function(y,Forecast_Functions,5,1,1,1)
+
+    
 # Cross Calculate for h and save error ------------------------------------
 
 tic("Cross Validating All Methods")
