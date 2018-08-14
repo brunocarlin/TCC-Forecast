@@ -204,7 +204,7 @@ Calculated_Errors <-
 
 Calc <- Calculated_Errors(y,List_Errors = List_Errors)
 
-Bad# CREATE WEIGHT MATRIX ----------------------------------------------------
+Works# CREATE WEIGHT MATRIX ----------------------------------------------------
 
 Inverse_Function <- function(Accuracy) {
   1/Accuracy 
@@ -256,7 +256,7 @@ Weight_Matrix_CV <- Create_Weight_Matrix(Inverted_Errors_CV)
 
 Weight_Matrix_Mean <- Create_Weight_Matrix(Inverted_Errors_Mean)
 
-WeightMatrix <- sweep(InverseErrors, 1, rowSums(InverseErrors), FUN = "/")
+quantile(Weight_Matrix_CV[["ME"]][,1])
 
 Works# Example of Selection Functions Rank ------------------------------------------
 
