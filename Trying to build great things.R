@@ -73,40 +73,66 @@ Forecast_Functions <- list(
   "Randon_Walk"     =     RW,
   "Seasonal_Naive"  =     SN)
 
+Forecast_Functions2 <- list(
+  "Auto_Arima"      =     RW,
+  "Tbats"           =     SN,
+  "ETS"             =     RW,
+  "Neural_Network"  =     SN,
+  "Seasonal_AR"     =     RW,
+  "Seasonal_ETS"    =     SN,
+  "Thetha"          =     RW,
+  "Randon_Walk"     =     SN,
+  "Seasonal_Naive"  =     RW)
+
 length(Forecast_Functions[[1]])                        
 seq_len(length(Forecast_Functions))
 # Try to save model and CI ------------------------------------------------
 
+
+
 Execute_Function <- function(
   y,
   List_Functions,
-  h = 1,
+  h,
   window = NULL,
   Start = 1,
-  Min_Lenght = 0,
-  ...
+  Min_Lenght = 0
 ){
-  
   Number_Functions <- length(List_Functions)
+  Names <- vector("character",Number_Functions)
   MatrixErrors <- vector("list",Number_Functions)
   for (i in seq_len(Number_Functions)) {
-    
+    Names[i] <- names(List_Functions[i])
+    MatrixErrors[[i]] <- Better_CV(
+      y = y,
+      forecastfunction = List_Functions[[i]],
+      h = h,
+      window = window,
+      Start = Start,
+      Min_Lenght = Min_Lenght
+      
+    )
+    names(MatrixErrors[i]) <-  names(List_Functions[i])   
   }
-  MatrixErrors[[i]] <- Better_CV(
-    y = y,
-    Forecast_Function[[i]],
-    h = h,
-    window = NULL,
-    Start = Start,
-    Min_Lenght = 0,
-    
-)
+  names(MatrixErrors) <- Names
   return(MatrixErrors)
 }
 
-OK<- Execute_Function(y,Forecast_Functions,5,1,1,1)
+Good_Start <- ifelse(length(y) -60 >= 0L, length(y) -60,1L)
+tic("Whole Process")
+List_Errors <- Execute_Function(y = y,List_Functions = Forecast_Functions2,h = 2,Start = Good_Start,Min_Lenght = 24)
+List_Errors
 
-    
+# toc()
+# 
+# Names <- vector("character",9)
+# Names[1:9] <- names(Forecast_Functions[1])
+# Names2 <-  
+# names(List_Errors) <- Names
+# tic(Names)
+# toc()
+# Names2 <- vector("character",9)
+
 # Cross Calculate for h and save error ------------------------------------
 
 tic("Cross Validating All Methods")
@@ -185,6 +211,15 @@ MatrixErrorsSN <- Better_CV(y, SN, h = h,
 toc()
 toc()
 
+MatrixErrorst <- vector("list",9)
+MatrixErrorst[[1]] <- Better_CV(
+  y =y,
+  Forecast_Functions[[9]],
+  h = h,
+  #window = NULL,
+  Start = 1,
+  Min_Lenght = 1,
+)
 
 #forecast1 <- Auto1(y,h)
 #forecast2 <- Auto2(y,h)
