@@ -1,3 +1,5 @@
+# Developed Error Functions, MASE just montly -----------------------------
+
 
 Mean_Error <- function(y = NULL, error) {
   mean(error, na.rm = TRUE)
