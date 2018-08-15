@@ -256,39 +256,51 @@ Weight_Matrix_CV <- Create_Weight_Matrix(Inverted_Errors_CV)
 
 Weight_Matrix_Mean <- Create_Weight_Matrix(Inverted_Errors_Mean)
 
-quantile(Weight_Matrix_CV[["ME"]][,1])
+
 
 Works# Example of Selection Functions Rank ------------------------------------------
 
-Rank <- function(Matrix_Weights, Position) {
+Rank <- function(Matrix_Weights, Position_Winner) {
   
-  Number_Models <- length(Matrix_Weights[1, ])
+  Number_Predictions <- length(Matrix_Weights[1, ])
   
-  for (i in 1 : length(Matrix_Weights[,1])){
+  Number_Models <- length(Matrix_Weights[,1])
+  
+  
+  for (i in seq_len(Number_Predictions )){
     
-    Vector_Weights <- Matrix_Weights[i,]
+    Vector_Weights <- Matrix_Weights[,i]
     
     ord <- order(Vector_Weights, decreasing = T)
     
     Vector_Weights <- Vector_Weights[order(Vector_Weights, decreasing = TRUE)]
     
-    Vector_Weights[(Position + 1 ):Number_Models] <- 0
+    Vector_Weights[(Position_Winner + 1 ):Number_Models] <- 0
     
     Vector_Weights <- Vector_Weights[order(ord)]
     
-    Matrix_Weights[i, ] <- Vector_Weights
+    Matrix_Weights[, i] <- Vector_Weights
     
   }
   return(Matrix_Weights)
 }
 
-#Ranked <- Rank(WeightMatrix, 1)
+Rank_Creator <- function(Matrix_Weights) {
 
-#Ranked_Weight <- sweep(Ranked, 1, rowSums(Ranked), FUN = "/")
+Number_Models <- length(Matrix_Weights[[1]][,1])
 
-Works# Example of Selection Functions Mean -------------------------------------
-#WeightMatrix2 <- rbind(c(0.45,0.45,0.1),c(0.7,0.2,0.1),c(0.2,0.1,0.7))
-#mean(WeightMatrix2[3,])
+Ranks <- vector("list",Number_Models)
+
+for(i in seq_len(Number_Models)){
+Ranks[[i]] <- lapply(Matrix_Weights, Rank, Position_Winner = i)
+}
+return(Ranks)
+}
+
+List_Ranked <- Rank_Creator(Weight_Matrix_CV)
+
+Works# Example of Selection Functions Value -------------------------------------
+
 Greater_Value <- function(Matrix_Weights,Min_Value,If_Lower_Average = FALSE) {
   
   Number_Models <- seq_along(Matrix_Weights[1,])
@@ -324,6 +336,12 @@ Greater_Value <- function(Matrix_Weights,Min_Value,If_Lower_Average = FALSE) {
 
 #Greater1 <- Greater_Value(WeightMatrix2,0.9,TRUE)
 
+
+# Extension by using Quantiles --------------------------------------------
+
+quantile(Weight_Matrix_CV[["ME"]][,1])
+
+
 Bad# Equaliser Function ------------------------------------------------------
 
 Equaliser <- function(Matrix_Weights) {
@@ -356,9 +374,9 @@ Equaliser <- function(Matrix_Weights) {
 
 
 
-Works# Compute Errors out of sample --------------------------------------------
+Bad# Compute Errors out of sample --------------------------------------------
 
-train <- y
+'train <- y
 TestResult1<- rowSums(WeightMatrix * Forecasts1)
 TestResult2 <- TestResult1/0.95
 
@@ -373,7 +391,7 @@ scalederror <- (abs(error) / mean(abs(diff(train, lag = frequency(train))))) %>%
   as_tibble() %>%
   mutate(Method = rownames(f)) %>%
   gather(key = h, value = ASE, -Method)
-LiSTA<- list(pcerror = pcerror, scalederror = scalederror)
+LiSTA<- list(pcerror = pcerror, scalederror = scalederror)'
 
 
 
