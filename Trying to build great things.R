@@ -177,7 +177,7 @@ Index_Maker <- function(y,Each,Cost_Function = as.numeric) {
 #Index_Example <- Index_Maker(y,frequency(y))
 # Reduced_Importance <- List_Forecasts_Errors[["Errors"]][["Auto_Arima"]]/Index_Example
 
-Works# "ME,RMSE,MAE,MPE,MAPE,MASE" ----------------------------------------
+Works # "ME,RMSE,MAE,MPE,MAPE,MASE" ----------------------------------------
 
 
 Calculated_Errors <-
@@ -204,7 +204,7 @@ Calculated_Errors <-
 
 Calc <- Calculated_Errors(y,List_Errors = List_Errors)
 
-Works# CREATE WEIGHT MATRIX ----------------------------------------------------
+Works # CREATE WEIGHT MATRIX ----------------------------------------------------
 
 Inverse_Function <- function(Accuracy) {
   1/Accuracy 
@@ -258,7 +258,7 @@ Weight_Matrix_Mean <- Create_Weight_Matrix(Inverted_Errors_Mean)
 
 
 
-Works# Example of Selection Functions Rank ------------------------------------------
+Ok # Example of Selection Functions Rank ------------------------------------------
 
 Rank <- function(Matrix_Weights, Position_Winner) {
   
@@ -299,78 +299,125 @@ return(Ranks)
 
 List_Ranked <- Rank_Creator(Weight_Matrix_CV)
 
-Works# Example of Selection Functions Value -------------------------------------
+Works # Example of Selection Functions Specif Value -------------------------------------
 
 Greater_Value <- function(Matrix_Weights,Min_Value,If_Lower_Average = FALSE) {
   
-  Number_Models <- seq_along(Matrix_Weights[1,])
-  Number_Models_Actual <- length(Matrix_Weights[1,])
-  Number_Errors_H   <- seq_along(Matrix_Weights[, 1])
+  Number_Models <- length(Matrix_Weights[ ,1])
+  Number_Predictions   <- length(Matrix_Weights[1,])
   
-  for (i in Number_Errors_H) {
-    Vector_Weights <- Matrix_Weights[i, ]
+  for (i in seq_len(Number_Predictions)) {
+    Vector_Weights <- Matrix_Weights[, i]
     
-    for (j in  Number_Models) {
-      
+    for (j in  seq_len(Number_Models)) {
       if (Min_Value > Vector_Weights[[j]]) {
         Vector_Weights[[j]] <- 0
       }
-       
-    
-    if(mean(Vector_Weights) != 0) {
-    Matrix_Weights[i, ] <- Vector_Weights
-  } else {
-    
-    if (If_Lower_Average == TRUE) {
-      for (j in  Number_Models) {
-        Vector_Weights[[j]] <- 1/Number_Models_Actual
+      
+      
+      if (mean(Vector_Weights) != 0) {
+        
+      } else {
+        if (If_Lower_Average == TRUE) {
+          for (j in  seq_len(Number_Models)) {
+            Vector_Weights[[j]] <- 1 / Number_Models
+          }
+        }
+        
       }
-    }
-  
-  }
-   Matrix_Weights[i, ] <-  Vector_Weights
+      Matrix_Weights[, i] <- Vector_Weights
     }
   }
- return(Matrix_Weights)
+  return(Matrix_Weights)
 }
-
-#Greater1 <- Greater_Value(WeightMatrix2,0.9,TRUE)
-
-
-# Extension by using Quantiles --------------------------------------------
-
-quantile(Weight_Matrix_CV[["ME"]][,1])
-
-
-Bad# Equaliser Function ------------------------------------------------------
-
-Equaliser <- function(Matrix_Weights) {
+Greater_Function_Vector <- function(Matrix_Weights,Function_Vector,If_Lower_Average = FALSE) {
   
-  Number_Models <- seq_along(Matrix_Weights[1,])
-  Number_Errors_H   <- seq_along(Matrix_Weights[, 1])
+  Number_Models <- length(Matrix_Weights[ ,1])
+  Number_Predictions   <- length(Matrix_Weights[1,])
   
-  for (i in Number_Errors_H) {
-    Vector_Weights <- Matrix_Weights[i, ]
-    
-    for (j in  Number_Models) {
-      
-      if (Vector_Weights[[j]] > 0) {
-        Vector_Weights[[j]] <- 1
+  for (i in seq_len(Number_Predictions)) {
+    Vector_Weights <- Matrix_Weights[, i]
+    Value <- Function_Vector(Vector_Weights)
+    for (j in  seq_len(Number_Models)) {
+      if (Value > Vector_Weights[[j]]) {
+        Vector_Weights[[j]] <- 0
       }
       
+      
+      if (mean(Vector_Weights) != 0) {
+        
+      } else {
+        if (If_Lower_Average == TRUE) {
+          for (j in  seq_len(Number_Models)) {
+            Vector_Weights[[j]] <- 1 / Number_Models
+          }
+        }
+        
+      }
+      Matrix_Weights[, i] <- Vector_Weights
     }
-    
-    Matrix_Weights[i, ] <- Vector_Weights
   }
   return(Matrix_Weights)
 }
 
-#Equalised_Weight <- sweep(Equi, 1, rowSums(Equi), FUN = "/")
+
+List_Mean_Chosen <- lapply(Weight_Matrix_CV, Greater_Function_Vector,mean)
+List_Median_Chosen <- lapply(Weight_Matrix_CV, Greater_Function_Vector,median)
+
+Specif_Quantile_25 <- function(x) { quantile(x,probs = 0.25)}
+List_Quantile_25 <- lapply(Weight_Matrix_CV, Greater_Function_Vector,Specif_Quantile_25)
+Bad # Extension by using Islands Idea --------------------------------------------
+#Another look at forecast selection and combination:
+#evidence from forecast pooling
+
+
+#While Weight > Q3 + 1.5* IQ(Q3 - Q1) keep adding models
+
+
+Ok# Equaliser Function ------------------------------------------------------
+
+Equaliser <- function(Matrix_Weights) {
+  
+  Number_Predictions <- length(Matrix_Weights[1, ])
+  Number_Models   <- length(Matrix_Weights[, 1])
+  
+  
+  
+  for (i in seq_len(Number_Predictions)) {
+    Vector_Weights <- Matrix_Weights[,i]
+    
+    for (j in  seq_len(Number_Models)) {
+      
+      if (Vector_Weights[[j]] > 0) {
+        Vector_Weights[[j]] <- 1L
+      }
+      
+    }
+   
+    Matrix_Weights[, i] <- Vector_Weights
+  }
+  Matrix_Weights <- sweep(Matrix_Weights, 2, colSums(Matrix_Weights), FUN = "/")
+  return(Matrix_Weights)
+}
+
+Teste_Equi <- lapply(List_Ranked,lapply,Equaliser)
 
 
 
 
 
+
+
+
+
+
+
+
+
+Bad # Maybe Combine Weights from different error methods ----------------------
+
+
+Bad# Combine All Weight With the forecasts -----------------------------------
 
 
 
