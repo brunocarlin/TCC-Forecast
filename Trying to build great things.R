@@ -94,7 +94,6 @@ Forecast_Functions2 <- list(
 length(Forecast_Functions[[1]])                        
 seq_len(length(Forecast_Functions))
 Ok # Try to Save forecasts calls ------------------------------------------------
-
 Forecast_Saver <- function(y,List_Functions,h) {
 
   Number_Functions <- length(List_Functions)
@@ -113,7 +112,8 @@ Forecast_Saver <- function(y,List_Functions,h) {
 }
 
 List_Forecasts <- Forecast_Saver(y,Forecast_Functions2,h)
-
+Forecasts_Mean <- lapply(List_Forecasts, `[`, c('mean'))
+List_Test <- matrix(unlist(Forecasts_Mean), nrow = 9, byrow = FALSE)
 
 Works # Cross Calculate for h and save errors ------------------------------------
 Cross_Calculate_Erros <- function(
@@ -256,7 +256,7 @@ Weight_Matrix_CV <- Create_Weight_Matrix(Inverted_Errors_CV)
 
 Weight_Matrix_Mean <- Create_Weight_Matrix(Inverted_Errors_Mean)
 
-
+Weight_Matrix_Both <- list(Mean_Weights = Weight_Matrix_Mean, CV_Weights =Weight_Matrix_CV)
 
 Ok # Example of Selection Functions Rank ------------------------------------------
 
@@ -299,6 +299,8 @@ return(Ranks)
 
 List_Ranked <- Rank_Creator(Weight_Matrix_CV)
 
+List_Ranked_Both <- lapply(Weight_Matrix_Both,Rank_Creator)
+
 Works # Example of Selection Functions Specif Value -------------------------------------
 
 Greater_Value <- function(Matrix_Weights,Min_Value,If_Lower_Average = FALSE) {
@@ -330,7 +332,7 @@ Greater_Value <- function(Matrix_Weights,Min_Value,If_Lower_Average = FALSE) {
   }
   return(Matrix_Weights)
 }
-Greater_Function_Vector <- function(Matrix_Weights,Function_Vector,If_Lower_Average = FALSE) {
+Greater_Function_Vector <- function(Matrix_Weights,Function_Vector,If_Lower_Average = FALSE,...) {
   
   Number_Models <- length(Matrix_Weights[ ,1])
   Number_Predictions   <- length(Matrix_Weights[1,])
@@ -361,17 +363,42 @@ Greater_Function_Vector <- function(Matrix_Weights,Function_Vector,If_Lower_Aver
 }
 
 
-List_Mean_Chosen <- lapply(Weight_Matrix_CV, Greater_Function_Vector,mean)
-List_Median_Chosen <- lapply(Weight_Matrix_CV, Greater_Function_Vector,median)
+List_Mean_Chosen <- lapply(Weight_Matrix_Both,lapply, Greater_Function_Vector,mean)
+List_Median_Chosen <- lapply(Weight_Matrix_Both,lapply, Greater_Function_Vector,median)
 
-Specif_Quantile_25 <- function(x) { quantile(x,probs = 0.25)}
-List_Quantile_25 <- lapply(Weight_Matrix_CV, Greater_Function_Vector,Specif_Quantile_25)
-Bad # Extension by using Islands Idea --------------------------------------------
+Quantile_25 <- function(x) { quantile(x,probs = 0.25)}
+Quantile_75 <- function(x) { quantile(x,probs = 0.75)}
+
+List_Quantile_25 <- map(Weight_Matrix_Both,lapply, Greater_Function_Vector,Quantile_25)
+List_Quantile_25 <- map(Weight_Matrix_Both,lapply, Greater_Function_Vector,Quantile_75)
+
+
+
+Ok # Extension by using Islands Idea --------------------------------------------
 #Another look at forecast selection and combination:
 #evidence from forecast pooling
 
+Upper_Limit <- function(x) {
+  
+  Q1 <- quantile(x,probs = 0.25)
+  Q3 <- quantile(x,probs = 0.75)
+  IQR <- Q3 - Q1
+  Results <- Q3 + 1.5*IQR
+  return(Results)
+}
 
-#While Weight > Q3 + 1.5* IQ(Q3 - Q1) keep adding models
+
+Lower_Limit <-  function(x) {
+  
+  Q1 <- quantile(x,probs = 0.25)
+  Q3 <- quantile(x,probs = 0.75)
+  IQR <- Q3 - Q1
+  Results <- Q1 - 1.5*IQR
+  return(Results)
+}
+
+List_Upper_Limit <- map(Weight_Matrix_Both,lapply, Greater_Function_Vector,Upper_Limit)
+List_Lower_Limit <- map(Weight_Matrix_Both,lapply, Greater_Function_Vector,Lower_Limit)
 
 
 Ok# Equaliser Function ------------------------------------------------------
@@ -400,7 +427,7 @@ Equaliser <- function(Matrix_Weights) {
   return(Matrix_Weights)
 }
 
-Teste_Equi <- lapply(List_Ranked,lapply,Equaliser)
+Teste_Equi <- lapply(List_Ranked_Both,lapply,lapply,lapply,Equaliser)
 
 
 
@@ -412,15 +439,30 @@ Teste_Equi <- lapply(List_Ranked,lapply,Equaliser)
 
 
 
+
+
+
+Bad # Combine Weights With the matrix of forecasts ----------------------------
 
 
 Bad # Maybe Combine Weights from different error methods ----------------------
 
 
+
+Bad # Combine All Lists -------------------------------------------------------
+
+
+
+List_All_Selections <- list(List_Ranked_Both,List_Upper_Limit)
+
+Unlisted1 <- lapply(List_All_Selections, "[[", 1)
+Unlisted2 <- lapply(Unlisted1, "[[", 1)
+View(List_All_Selections)
+
 Bad# Combine All Weight With the forecasts -----------------------------------
 
-
-
+library(reshape2)
+Test <- melt(List_All_Selections)
 Bad# Compute Errors out of sample --------------------------------------------
 
 'train <- y

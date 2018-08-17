@@ -47,11 +47,11 @@ CV_Mean_Squared_Error <- function(y = NULL, error) {
 
 
 Root_Mean_Squared_Error <- function(y = NULL, error) {
-  mean(sqrt(error ^ 2), na.rm = TRUE)
+  sqrt(mean(error ^ 2, na.rm = TRUE))
 }
 
 CV_Root_Mean_Squared_Error <- function(y = NULL, error) {
-  colMeans(sqrt(error ^ 2), na.rm = TRUE)
+  sqrt(colMeans(error ^ 2, na.rm = TRUE))
 }
 
 
@@ -163,6 +163,31 @@ Mean_Accuracy <- function(y, error) {
 }
 
 CV_Mean_Accuracy <- function(y, error) {
+  CV_Mean_Accuracy_Results <- rbind(
+    ME = CV_Mean_Error(y, error),
+    RMSE = CV_Root_Mean_Squared_Error(y, error),
+    MAE = CV_Mean_Absolute_Error(y, error),
+    MPE = CV_Mean_Percentage_Error(y, error),
+    MAPE = CV_Mean_Absolute_Percentage_Error(y, error),
+    MASE = CV_Mean_Absolute_Scaled_Error(y, error),
+    sMAPE = CV_Mean_Symmetric_Absolute_Percentage_Error(y, error)
+  )
+  colnames(CV_Mean_Accuracy_Results) <- colnames(error)
+  return(CV_Mean_Accuracy_Results)
+}
+
+Both_Accuracies <- function(y, error) {
+  CV_Mean_Accuracy_Results <- rbind(
+    ME = Mean_Error(y, error),
+    RMSE = Root_Mean_Squared_Error(y, error),
+    MAE = Mean_Absolute_Error(y, error),
+    MPE = Mean_Percentage_Error(y, error),
+    MAPE = Mean_Absolute_Percentage_Error(y, error),
+    MASE = Mean_Absolute_Scaled_Error(y, error),
+    sMAPE = Mean_Symmetric_Absolute_Percentage_Error(y, error)
+  )
+  colnames(CV_Mean_Accuracy_Results) <- "Mean Hs"
+  
   Mean_Accracy_Results <- rbind(
     ME = CV_Mean_Error(y, error),
     RMSE = CV_Root_Mean_Squared_Error(y, error),
@@ -173,8 +198,11 @@ CV_Mean_Accuracy <- function(y, error) {
     sMAPE = CV_Mean_Symmetric_Absolute_Percentage_Error(y, error)
   )
   colnames(Mean_Accracy_Results) <- colnames(error)
-  return(Mean_Accracy_Results)
+  
+  return(list(Mean_Accracy_Results,CV_Mean_Accuracy_Results))
 }
+
+
 
 
 
