@@ -1,6 +1,5 @@
 # Load Libraries, Create Status ----------------------------------------------------------
 
-
 library(forecast)
 library(forecastHybrid)
 library(tidyverse)
@@ -9,6 +8,7 @@ library(Mcomp)
 library(rlist)
 library(forecTheta)
 library(tictoc)
+library(reshape2)
 
 Ok <- print("Feito")
 Bad <- print("Doesn't Work")
@@ -22,7 +22,8 @@ SubsetM3 <- list.filter(M3, "MONTHLY" %in% period & n > 50)
 SubsetM31 <- list.filter(M3, "MONTHLY" %in% period & n > 48 & "N1876" %in% sn)
 
 y <- SubsetM3$N1876$x
-h <- 2
+xx<- SubsetM3$N1876$xx
+h <- 18
 
 Ok # Use Forecast Functions --------------------------------------------------
 
@@ -91,8 +92,6 @@ Forecast_Functions2 <- list(
   "Randon_Walk"     =     SN,
   "Seasonal_Naive"  =     RW)
 
-length(Forecast_Functions[[1]])                        
-seq_len(length(Forecast_Functions))
 Ok # Try to Save forecasts calls ------------------------------------------------
 Forecast_Saver <- function(y,List_Functions,h) {
 
@@ -111,9 +110,14 @@ Forecast_Saver <- function(y,List_Functions,h) {
   
 }
 
-List_Forecasts <- Forecast_Saver(y,Forecast_Functions2,h)
+List_Forecasts <- Forecast_Saver(y,Forecast_Functions,h)
+
 Forecasts_Mean <- lapply(List_Forecasts, `[`, c('mean'))
-List_Test <- matrix(unlist(Forecasts_Mean), nrow = 9, byrow = FALSE)
+
+Mean_Forecasts <- matrix(unlist(Forecasts_Mean), nrow = length(Forecasts_Mean), byrow = FALSE)
+
+colnames(Mean_Forecasts) <- paste("h=", 1:length(Mean_Forecasts[1,]), sep = "")
+rownames(Mean_Forecasts) <- names(Forecast_Functions)
 
 Works # Cross Calculate for h and save errors ------------------------------------
 Cross_Calculate_Erros <- function(
@@ -145,34 +149,34 @@ Cross_Calculate_Erros <- function(
 
 Good_Start <- ifelse(length(y) -60 >= 0L, length(y) -60,1L)
 
-
-List_Errors <- Cross_Calculate_Erros(
+tic()
+List_of_Errors <- Cross_Calculate_Erros(
   y = y,
-  List_Functions = Forecast_Functions2,
+  List_Functions = Forecast_Functions,
   h = h,
   #window = window,
   Start = Good_Start,
   Min_Lenght = 24
 )
-
+toc()
 #forecast1 <- Auto1(y,h)
 #forecast2 <- Auto2(y,h)
 
 
-Ok # Create an object  with the Time Series, CV Accuracy, Forecast   --------
+Works # Create an object  with the Time Series, CV Accuracy, Forecast   --------
 
-List_Forecasts_Errors <- list(Errors = List_Errors,Calls = List_Forecasts)
+# List_Forecasts_Errors <- list(Errors = List_Errors,Calls = List_Forecasts)
 
 
 Works # Use some kind of cost to older errors -----------------------------------
 
 
-Index_Maker <- function(y,Each,Cost_Function = as.numeric) {
-  Rep_Sequence <- 1:((length(y)/Each)+1)
-  Index_Intermediary1 <- rep(Rep_Sequence, each = Each, len = length(y))
-  Index_Intermediary2 <- map_dbl(Index_Intermediary1,Cost_Function)
-  sort(Index_Intermediary2, decreasing = TRUE)
-}
+ #Index_Maker <- function(y,Each,Cost_Function = as.numeric) {
+ # Rep_Sequence <- 1:((length(y)/Each)+1)
+ # Index_Intermediary1 <- rep(Rep_Sequence, each = Each, len = length(y))
+ # Index_Intermediary2 <- map_dbl(Index_Intermediary1,Cost_Function)
+ # sort(Index_Intermediary2, decreasing = TRUE)
+#}
 
 #Index_Example <- Index_Maker(y,frequency(y))
 # Reduced_Importance <- List_Forecasts_Errors[["Errors"]][["Auto_Arima"]]/Index_Example
@@ -180,9 +184,7 @@ Index_Maker <- function(y,Each,Cost_Function = as.numeric) {
 Works # "ME,RMSE,MAE,MPE,MAPE,MASE" ----------------------------------------
 
 
-Calculated_Errors <-
-  function(y,List_Errors) 
-  {
+Calculate_Errors <-function(y,List_Errors) {
     
     Number_Models <- length(List_Errors)
     Error_Metrics_CV <- vector("list",Number_Models)
@@ -202,18 +204,16 @@ Calculated_Errors <-
     
   }
 
-Calc <- Calculated_Errors(y,List_Errors = List_Errors)
+Calculated_Errors <- Calculate_Errors(y,List_Errors = List_of_Errors)
 
 Works # CREATE WEIGHT MATRIX ----------------------------------------------------
 
-Inverse_Function <- function(Accuracy) {
-  1/Accuracy 
+Invert_List_Accuracy <- function(Accuracy) {
+    1/Accuracy 
+
 }
 
-Inverted_Errors_CV <- map(Calc[["CV_Error_Metrics"]],Inverse_Function)
-
-Inverted_Errors_Mean <- map(Calc[["Mean_Error_Metrics"]],Inverse_Function)
-
+Inverted_Errors <- lapply(Calculated_Errors,lapply,Invert_List_Accuracy)
 
 Create_Weight_Matrix <- function(List_Accuracy) {
   
@@ -252,11 +252,8 @@ Create_Weight_Matrix <- function(List_Accuracy) {
   return(Weight_Matrix)
 }
 
-Weight_Matrix_CV <- Create_Weight_Matrix(Inverted_Errors_CV)
+Weight_Matrix <- lapply(Inverted_Errors,Create_Weight_Matrix)
 
-Weight_Matrix_Mean <- Create_Weight_Matrix(Inverted_Errors_Mean)
-
-Weight_Matrix_Both <- list(Mean_Weights = Weight_Matrix_Mean, CV_Weights =Weight_Matrix_CV)
 
 Ok # Example of Selection Functions Rank ------------------------------------------
 
@@ -285,21 +282,23 @@ Rank <- function(Matrix_Weights, Position_Winner) {
   return(Matrix_Weights)
 }
 
-Rank_Creator <- function(Matrix_Weights) {
-
-Number_Models <- length(Matrix_Weights[[1]][,1])
-
-Ranks <- vector("list",Number_Models)
-
-for(i in seq_len(Number_Models)){
-Ranks[[i]] <- lapply(Matrix_Weights, Rank, Position_Winner = i)
+Rank_Maker <- function(Matrix_Weights) {
+  
+  Number_Models <- length(Weight_Matrix[[1]][[1]][,1])
+  
+  
+  Ranks <- vector("list", Number_Models)
+  
+  for (i in seq_len(Number_Models)) {
+    Ranks[[i]] <- lapply(Matrix_Weights,lapply,Rank,i)
+    
+  }
+  names(Ranks) <- paste(1:Number_Models,"_Selected_Models", sep = "")
+  return(Ranks)
 }
-return(Ranks)
-}
 
-List_Ranked <- Rank_Creator(Weight_Matrix_CV)
+List_Ranked <- Rank_Maker(Weight_Matrix)
 
-List_Ranked_Both <- lapply(Weight_Matrix_Both,Rank_Creator)
 
 Works # Example of Selection Functions Specif Value -------------------------------------
 
@@ -332,6 +331,7 @@ Greater_Value <- function(Matrix_Weights,Min_Value,If_Lower_Average = FALSE) {
   }
   return(Matrix_Weights)
 }
+
 Greater_Function_Vector <- function(Matrix_Weights,Function_Vector,If_Lower_Average = FALSE,...) {
   
   Number_Models <- length(Matrix_Weights[ ,1])
@@ -359,18 +359,18 @@ Greater_Function_Vector <- function(Matrix_Weights,Function_Vector,If_Lower_Aver
       Matrix_Weights[, i] <- Vector_Weights
     }
   }
-  return(Matrix_Weights)
+  return( Matrix_Weights)
 }
 
 
-List_Mean_Chosen <- lapply(Weight_Matrix_Both,lapply, Greater_Function_Vector,mean)
-List_Median_Chosen <- lapply(Weight_Matrix_Both,lapply, Greater_Function_Vector,median)
+List_Mean_Chosen <- lapply(Weight_Matrix,lapply, Greater_Function_Vector,mean)
+#List_Median_Chosen <- lapply(Weight_Matrix_Both,lapply, Greater_Function_Vector,median)
 
-Quantile_25 <- function(x) { quantile(x,probs = 0.25)}
-Quantile_75 <- function(x) { quantile(x,probs = 0.75)}
+#Quantile_25 <- function(x) { quantile(x,probs = 0.25)}
+#Quantile_75 <- function(x) { quantile(x,probs = 0.75)}
 
-List_Quantile_25 <- map(Weight_Matrix_Both,lapply, Greater_Function_Vector,Quantile_25)
-List_Quantile_25 <- map(Weight_Matrix_Both,lapply, Greater_Function_Vector,Quantile_75)
+#List_Quantile_25 <- map(Weight_Matrix_Both,lapply, Greater_Function_Vector,Quantile_25)
+#List_Quantile_75 <- map(Weight_Matrix_Both,lapply, Greater_Function_Vector,Quantile_75)
 
 
 
@@ -383,10 +383,9 @@ Upper_Limit <- function(x) {
   Q1 <- quantile(x,probs = 0.25)
   Q3 <- quantile(x,probs = 0.75)
   IQR <- Q3 - Q1
-  Results <- Q3 + 1.5*IQR
+  Results <- Q3 + 1.5 * IQR
   return(Results)
 }
-
 
 Lower_Limit <-  function(x) {
   
@@ -397,13 +396,108 @@ Lower_Limit <-  function(x) {
   return(Results)
 }
 
-List_Upper_Limit <- map(Weight_Matrix_Both,lapply, Greater_Function_Vector,Upper_Limit)
-List_Lower_Limit <- map(Weight_Matrix_Both,lapply, Greater_Function_Vector,Lower_Limit)
+Diff <- function(x) diff(c(head(x,1),x))
+
+Create_Error_Matrix <- function(List_Accuracy) {
+  
+  RowNames <- names(List_Accuracy)
+  
+  ColNames <- colnames(List_Accuracy[[1]])
+  
+  ListNames <- rownames(List_Accuracy[[1]])
+  
+  Number_Models <- length(List_Accuracy)
+  
+  Number_Errors <- length(List_Accuracy[[1]][,1])
+  
+  Number_Predictions <- length( List_Accuracy[[1]][1,])
+  
+  
+  Weight_Matrix <- vector("list",Number_Errors)
+  Temporary_Matrix <-
+    matrix(0, nrow = Number_Models, ncol = Number_Predictions)
+  
+  rownames(Temporary_Matrix) <- RowNames
+  colnames(Temporary_Matrix) <- ColNames
+  
+  for(i in seq_len(Number_Errors)){
+    
+    
+    for (j in seq_len(Number_Models)) {
+      
+      Temporary_Matrix[j,] <- List_Accuracy[[j]][i,1:Number_Predictions]
+    }
+    
+    Weight_Matrix[[i]] <- Temporary_Matrix
+  }
+  names(Weight_Matrix) <- ListNames
+  return(Weight_Matrix)
+}
+
+Inverted_Matrix <- lapply(Calculated_Errors, Create_Error_Matrix)
+
+Islands <- function(Matrix_Errors, Function_For_Ordered_Vector) {
+  
+  Number_Predictions <- length(Matrix_Errors[1, ])
+  
+  Number_Models <- length(Matrix_Errors[,1])
+  
+  
+  for (i in seq_len(Number_Predictions )){
+    
+    Vector_Errors <- Matrix_Errors[,i]
+    
+    Outlier_Detected <- 0
+    
+    ord <- order(Vector_Errors, decreasing = FALSE)
+    
+    Vector_Errors <- Vector_Errors[order(Vector_Errors, decreasing = FALSE)]
+    
+    for(j in seq_len(Number_Models)) {
+      
+      Considered_Vector <-  Diff(head(Vector_Errors,j))
+      
+      if( Outlier_Detected != 1) {    
+        if (Function_For_Ordered_Vector(Considered_Vector) < tail(Considered_Vector,1)){
+          
+          Outlier_Detected <- 1
+          Vector_Errors[[j]] <- Inf
+          
+        }
+      } else{
+        Vector_Errors[[j]] <- Inf
+      }
+      
+    }
+    
+    Vector_Errors <- Vector_Errors[order(ord)]
+    
+    Matrix_Errors[, i] <- Vector_Errors
+    
+  }
+  return(Matrix_Errors)
+}
+
+Islands_Chosen <- lapply(Inverted_Matrix, lapply,Islands,Upper_Limit)
+
+Islands_Chosen <- lapply(Islands_Chosen,lapply,Invert_List_Accuracy)
+
+Bad # Maybe Combine Weights from different error methods ----------------------
 
 
-Ok# Equaliser Function ------------------------------------------------------
 
-Equaliser <- function(Matrix_Weights) {
+Works # Combine All Lists -------------------------------------------------------
+
+List_All_Selections <-
+  list(
+    Ranked_Position = List_Ranked,
+    Vector_Functions = list(Mean_Chosen = List_Mean_Chosen, Island_Chosen = Islands_Chosen)
+  )
+
+
+Ok# Equalise or Calculate Weights Functions ------------------------------------------------------
+
+Equalise <- function(Matrix_Weights) {
   
   Number_Predictions <- length(Matrix_Weights[1, ])
   Number_Models   <- length(Matrix_Weights[, 1])
@@ -427,42 +521,39 @@ Equaliser <- function(Matrix_Weights) {
   return(Matrix_Weights)
 }
 
-Teste_Equi <- lapply(List_Ranked_Both,lapply,lapply,lapply,Equaliser)
+List_Equalised <- lapply(List_All_Selections,lapply,lapply,lapply,Equalise)
 
 
+Weighted_Average <- function(Matrix_Weights) {
 
+  Matrix_Weights <- sweep(Matrix_Weights, 2, colSums(Matrix_Weights), FUN = "/")
+  return(Matrix_Weights)
+}
 
+List_Weighted <- lapply(List_All_Selections,lapply,lapply,lapply,Weighted_Average)
 
-
-
-
-
-
-
-
-
-
-Bad # Combine Weights With the matrix of forecasts ----------------------------
-
-
-Bad # Maybe Combine Weights from different error methods ----------------------
-
-
-
-Bad # Combine All Lists -------------------------------------------------------
-
-
-
-List_All_Selections <- list(List_Ranked_Both,List_Upper_Limit)
-
-Unlisted1 <- lapply(List_All_Selections, "[[", 1)
-Unlisted2 <- lapply(Unlisted1, "[[", 1)
-View(List_All_Selections)
+Final_List_Weights <- list(Same_Weights = List_Equalised, Weighted_Average = List_Weighted)
 
 Bad# Combine All Weight With the forecasts -----------------------------------
+Multiplication_Forecast <- function(MatrixWeights,Forecast) {
+  
+  if( ncol(MatrixWeights) > 1) {
+    Result <- diag(t(MatrixWeights) %*% Forecast,names = FALSE)
+    
+  } else {
+    
+    Result <-  t(MatrixWeights) %*% Forecast 
+  }
+  
+  Result<- 1 %*% Result
+  colnames(Result) <- colnames(Forecast)
+  rownames(Result) <- "Teste"
+  return(Result)
+}
 
-library(reshape2)
-Test <- melt(List_All_Selections)
+List_Weighted <- lapply(Final_List_Weights,lapply,lapply,lapply,lapply,Multiplication_Forecast,Mean_Forecasts)
+
+Test <- melt(List_Weighted)
 Bad# Compute Errors out of sample --------------------------------------------
 
 'train <- y
@@ -481,6 +572,9 @@ scalederror <- (abs(error) / mean(abs(diff(train, lag = frequency(train))))) %>%
   mutate(Method = rownames(f)) %>%
   gather(key = h, value = ASE, -Method)
 LiSTA<- list(pcerror = pcerror, scalederror = scalederror)'
+
+
+
 
 
 

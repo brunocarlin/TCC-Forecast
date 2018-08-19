@@ -148,29 +148,50 @@ CV_Mean_Absolute_Scaled_Error <- function(y, error) {
 }
 
 
+Mean_Random_Error <- function(y, error) {
+  
+  MRE <- apply(error, 1, function(x) x*0 + rnorm(ncol(error)) )
+  
+  
+  mean(MRE, na.rm = TRUE)
+  
+}
+
+CV_Mean_Random_Error <- function(y, error) {
+  
+  CMRE <- apply(error, 1, function(x) x*0 + rnorm(ncol(error)) )
+  
+  
+  rowMeans(CMRE, na.rm = TRUE)
+  
+}
+
+
 Mean_Accuracy <- function(y, error) {
   Mean_Accracy_Results <- rbind(
-    ME = Mean_Error(y, error),
+    AME = abs(Mean_Error(y, error)),
     RMSE = Root_Mean_Squared_Error(y, error),
     MAE = Mean_Absolute_Error(y, error),
-    MPE = Mean_Percentage_Error(y, error),
+    AMPE = abs(Mean_Percentage_Error(y, error)),
     MAPE = Mean_Absolute_Percentage_Error(y, error),
     MASE = Mean_Absolute_Scaled_Error(y, error),
-    sMAPE = Mean_Symmetric_Absolute_Percentage_Error(y, error)
+    sMAPE = Mean_Symmetric_Absolute_Percentage_Error(y, error),
+    AMRE = abs(Mean_Random_Error(y,error))
   )
-  colnames(Mean_Accracy_Results) <- "Placeholder_Name"
+  colnames(Mean_Accracy_Results) <- "Averaged_Time"
   return(Mean_Accracy_Results)
 }
 
 CV_Mean_Accuracy <- function(y, error) {
   CV_Mean_Accuracy_Results <- rbind(
-    ME = CV_Mean_Error(y, error),
+    AME = abs(CV_Mean_Error(y, error)),
     RMSE = CV_Root_Mean_Squared_Error(y, error),
     MAE = CV_Mean_Absolute_Error(y, error),
-    MPE = CV_Mean_Percentage_Error(y, error),
+    AMPE = abs(CV_Mean_Percentage_Error(y, error)),
     MAPE = CV_Mean_Absolute_Percentage_Error(y, error),
     MASE = CV_Mean_Absolute_Scaled_Error(y, error),
-    sMAPE = CV_Mean_Symmetric_Absolute_Percentage_Error(y, error)
+    sMAPE = CV_Mean_Symmetric_Absolute_Percentage_Error(y, error),
+    AMRE = abs(CV_Mean_Random_Error(y,error))
   )
   colnames(CV_Mean_Accuracy_Results) <- colnames(error)
   return(CV_Mean_Accuracy_Results)
