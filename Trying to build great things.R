@@ -554,26 +554,32 @@ Multiplication_Forecast <- function(MatrixWeights,Forecast) {
 List_Weighted <- lapply(Final_List_Weights,lapply,lapply,lapply,lapply,Multiplication_Forecast,Mean_Forecasts)
 
 Test <- melt(List_Weighted)
-Bad# Compute Errors out of sample --------------------------------------------
-
-'train <- y
-TestResult1<- rowSums(WeightMatrix * Forecasts1)
-TestResult2 <- TestResult1/0.95
-
-f<- rbind(TestResult1,TestResult2)
-
-error <- -sweep(f, 2, test)
-pcerror <- (200 * abs(error) / sweep(abs(f), 2, abs(test), FUN = "+")) %>%
-  as_tibble() %>%
-  mutate(Method = rownames(f)) %>%
-  gather(key = h, value = sAPE, -Method)
-scalederror <- (abs(error) / mean(abs(diff(train, lag = frequency(train))))) %>%
-  as_tibble() %>%
-  mutate(Method = rownames(f)) %>%
-  gather(key = h, value = ASE, -Method)
-LiSTA<- list(pcerror = pcerror, scalederror = scalederror)'
+Ok# Compute Errors out of sample --------------------------------------------
 
 
+train <- y
+test <- u$xx
+test <- xx
+
+Calculate_OS_Errors <- function(f,train,test) {
+  error <- -sweep(f, 2, test)  
+  pcerror <- (200 * abs(error) / sweep(abs(f), 2, abs(test), FUN = "+"))
+  
+  scalederror <- (abs(error) / mean(abs(diff(train, lag = frequency(train)))))
+  
+  Errors <- rbind(Symmetric_Errors = pcerror,
+                  Scaled_Errors = scalederror)
+  rownames(Errors) <- c("Symmetric_Errors","Scaled_Errors")
+  return(Errors)
+}
+
+Bonsai <- lapply(List_Weighted,lapply,lapply,lapply,lapply,Calculate_OS_Errors,y,xx)
+
+Leafs <- melt(Bonsai)
+
+
+
+Bad # Loop and do something with results --------------------------------------
 
 
 
