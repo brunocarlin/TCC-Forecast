@@ -284,7 +284,7 @@ Rank <- function(Matrix_Weights, Position_Winner) {
 
 Rank_Maker <- function(Matrix_Weights) {
   
-  Number_Models <- length(Weight_Matrix[[1]][[1]][,1])
+  Number_Models <- length(Matrix_Weights[[1]][[1]][,1])
   
   
   Ranks <- vector("list", Number_Models)
@@ -297,7 +297,7 @@ Rank_Maker <- function(Matrix_Weights) {
   return(Ranks)
 }
 
-List_Ranked <- Rank_Maker(Weight_Matrix)
+List_Ranked <- Rank_Maker(Matrix_Weights)
 
 
 Works # Example of Selection Functions Specif Value -------------------------------------
@@ -558,7 +558,7 @@ Ok# Compute Errors out of sample --------------------------------------------
 
 
 train <- y
-test <- u$xx
+
 test <- xx
 
 Calculate_OS_Errors <- function(f,train,test) {
@@ -569,7 +569,7 @@ Calculate_OS_Errors <- function(f,train,test) {
   
   Errors <- rbind(Symmetric_Errors = pcerror,
                   Scaled_Errors = scalederror)
-  rownames(Errors) <- c("Symmetric_Errors","Scaled_Errors")
+
   return(Errors)
 }
 

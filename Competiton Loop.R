@@ -711,7 +711,7 @@ SubsetM3 <- list.filter(M3, "MONTHLY" %in% period & n > 50)
 # Do TCC --------------------------------------------------------------
 plan(multisession)
 tic("Whole Process")
-Something <-  future_map(SubsetM3, safely(function(u) {
+Something3 <-  future_map(SubsetM3, safely(function(u) {
   
 y <- u$x
 xx<- u$xx
@@ -765,12 +765,9 @@ Forecast_Functions <- list(
   "Auto_Arima"      =     AR,
   "Tbats"           =     TB,
   "ETS"             =     ET,
-  "Neural_Network"  =     NN,
   "Seasonal_AR"     =     SA,
   "Seasonal_ETS"    =     SE,
-  "Thetha"          =     TH,
-  "Randon_Walk"     =     RW,
-  "Seasonal_Naive"  =     SN)
+  "Thetha"          =     TH)
 toc()
 
 List_Forecasts <- Forecast_Saver(y,Forecast_Functions,h)
@@ -849,8 +846,9 @@ return(Bonsai)
 })
 ,.progress = T)
 
+save(Something,file = "Results.RData")
 list.filter(Something, "result" %in% period & n > 50)
-
+save(starting.values, file="fname.RData")
 toc()
 
 
