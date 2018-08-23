@@ -698,30 +698,79 @@ Cross_Calculate_Erros <- function(
 
 
 
+Better_CV_Fold <- function (y, forecastfunction, h = 1, window = NULL,Start= 1,Max_Fold = NULL,Min_Lenght = 0, ...) {
+  y <- as.ts(y)
+  n <- length(y)
+  e <- ts(matrix(NA_real_, nrow = n, ncol = h))
+  tsp(e) <- tsp(y)
+  First_Fold <- ifelse(is.null(Max_Fold), n%%h ,ifelse(n > h*Max_Fold,n - h*Max_Fold,n%%h))
+  for (i in seq(First_Fold,n - 1,h)) {
+    fc <- try(suppressWarnings(forecastfunction(subset(y, 
+                                                       start = ifelse(i- Start >= 0L & i- Min_Lenght >= 0L, ifelse(is.null(window), 1L, ifelse(i - window >= 
+                                                                                                                                                 0L, i - window + 1L, stop("small window"))),stop("Too Short")), 
+                                                       end = i), h = h, ...)), silent = TRUE)
+    if (!is.element("try-error", class(fc))) {
+      e[i, ] <- y[i + (1:h)] - fc$mean
+    }
+  }
+  if (h == 1) {
+    return(e[, 1L])
+  }
+  else {
+    colnames(e) <- paste("h=", 1:h, sep = "")
+    return(e)
+  }
+}
 
+Cross_Calculate_Errors_CV <- function(
+  y,
+  List_Functions,
+  h,
+  window = NULL,
+  Start = 1,
+  Min_Lenght = 0,
+  Max_Fold = NULL
+){
+  Number_Functions <- length(List_Functions)
+  Names <- vector("character",Number_Functions)
+  MatrixErrors <- vector("list",Number_Functions)
+  for (i in seq_len(Number_Functions)) {
+    Names[i] <- names(List_Functions[i])
+    MatrixErrors[[i]] <- Better_CV_Fold(
+      y = y,
+      forecastfunction = List_Functions[[i]],
+      h = h,
+      window = window,
+      Start = Start,
+      Min_Lenght = Min_Lenght,
+      Max_Fold = Max_Fold
+      
+    )
+  }
+  names(MatrixErrors) <- Names
+  return(MatrixErrors)
+}
 
 
 # The M3 Results Function -------------------------------------------------
 toc()
 # Load Funtions from Testing File
 
-SubsetM3 <- list.filter(M3, "MONTHLY" %in% period & n > 50)
-
+SubsetM3 <- list.filter(M3, "MONTHLY" %in% period & n > 50 )
 
 # Do TCC --------------------------------------------------------------
 plan(multisession)
 tic("Whole Process")
-Something3 <-  future_map(SubsetM3, safely(function(u) {
+SomethingTeste2 <-  future_map(SubsetM3, safely(function(u) {
   
 y <- u$x
 xx<- u$xx
 h <- 18
-
+n <- y$sn
 
 
 # Use Forecast Functions --------------------------------------------------
 
-tic()
 AR <- function(x, h) {
   forecast(auto.arima(x,
                       #stepwise=FALSE,
@@ -764,11 +813,7 @@ SN <- function(x, h) {
 Forecast_Functions <- list(
   "Auto_Arima"      =     AR,
   "Tbats"           =     TB,
-  "ETS"             =     ET,
-  "Seasonal_AR"     =     SA,
-  "Seasonal_ETS"    =     SE,
-  "Thetha"          =     TH)
-toc()
+  "ETS"             =     ET)
 
 List_Forecasts <- Forecast_Saver(y,Forecast_Functions,h)
 
@@ -780,18 +825,14 @@ colnames(Mean_Forecasts) <- paste("h=", 1:length(Mean_Forecasts[1,]), sep = "")
 rownames(Mean_Forecasts) <- names(Forecast_Functions)
 
 
-Good_Start <- ifelse(length(y) -60 >= 0L, length(y) -60,1L)
-
-tic()
-List_of_Errors <- Cross_Calculate_Erros(
+List_of_Errors <- Cross_Calculate_Errors_CV(
   y = y,
   List_Functions = Forecast_Functions,
   h = h,
   #window = window,
-  Start = Good_Start,
-  Min_Lenght = 24
+  Min_Lenght = 24,
+  Max_Fold = 5
 )
-toc()
 
 
 Calculated_Errors <- Calculate_Errors(y,List_Errors = List_of_Errors)
@@ -846,7 +887,7 @@ return(Bonsai)
 })
 ,.progress = T)
 
-save(Something,file = "Results.RData")
+save(Something3,file = "Results_K_Folds6.RData")
 list.filter(Something, "result" %in% period & n > 50)
 save(starting.values, file="fname.RData")
 toc()
