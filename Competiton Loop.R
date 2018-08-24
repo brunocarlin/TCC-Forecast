@@ -328,7 +328,8 @@ Both_Accuracies <- function(y, error) {
 }
 # List Manipulation and Inversion --------------------------------------------------------
 Invert_List_Accuracy <- function(Accuracy) {
-  1/Accuracy 
+  
+  ifelse(Accuracy !=0,1/Accuracy,0.0001) 
   
 }
 
