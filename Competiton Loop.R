@@ -65,14 +65,14 @@ Forecast_Functions <- list(
   "Seasonal_Naive"  =     SN)
 
 # Function Used -----------------------------------------------------------
-Forecast_Saver <- function(y,List_Functions,h) {
+Forecast_Saver <- function(x,List_Functions,h) {
   
   Number_Functions <- length(List_Functions)
   Names <- vector("character",Number_Functions)
   Forecass_Obeject <- vector("list",Number_Functions)
   
   for(i in seq_len(Number_Functions)) {
-    Forecass_Obeject[[i]] <- List_Functions[[i]](y,h)
+    Forecass_Obeject[[i]] <- List_Functions[[i]](x,h)
     Names[i] <- names(List_Functions[i])
     
     
@@ -380,7 +380,7 @@ Rank <- function(Matrix_Weights, Position_Winner) {
   
   Number_Models <- length(Matrix_Weights[,1])
   
-  
+  if ( Number_Models > Position_Winner) {
   for (i in seq_len(Number_Predictions )){
     
     Vector_Weights <- Matrix_Weights[,i]
@@ -394,7 +394,7 @@ Rank <- function(Matrix_Weights, Position_Winner) {
     Vector_Weights <- Vector_Weights[order(ord)]
     
     Matrix_Weights[, i] <- Vector_Weights
-    
+  }
   }
   return(Matrix_Weights)
 }
@@ -766,7 +766,6 @@ SomethingTeste2 <-  future_map(SubsetM3, safely(function(u) {
 y <- u$x
 xx<- u$xx
 h <- 18
-n <- y$sn
 
 
 # Use Forecast Functions --------------------------------------------------
@@ -813,13 +812,19 @@ SN <- function(x, h) {
 Forecast_Functions <- list(
   "Auto_Arima"      =     AR,
   "Tbats"           =     TB,
-  "ETS"             =     ET)
+  "ETS"             =     ET,
+  "Neural_Network"  =     NN,
+  "Seasonal_AR"     =     SA,
+  "Seasonal_ETS"    =     SE,
+  "Thetha"          =     TH,
+  "Randon_Walk"     =     RW,
+  "Seasonal_Naive"  =     SN)
 
 List_Forecasts <- Forecast_Saver(y,Forecast_Functions,h)
 
 Forecasts_Mean <- lapply(List_Forecasts, `[`, c('mean'))
 
-Mean_Forecasts <- matrix(unlist(Forecasts_Mean), nrow = length(Forecasts_Mean), byrow = FALSE)
+Mean_Forecasts <- matrix(unlist(Forecasts_Mean), nrow = length(Forecasts_Mean), byrow = TRUE)
 
 colnames(Mean_Forecasts) <- paste("h=", 1:length(Mean_Forecasts[1,]), sep = "")
 rownames(Mean_Forecasts) <- names(Forecast_Functions)
@@ -887,9 +892,9 @@ return(Bonsai)
 })
 ,.progress = T)
 
-save(Something3,file = "Results_K_Folds6.RData")
-list.filter(Something, "result" %in% period & n > 50)
-save(starting.values, file="fname.RData")
+#save(Something3,file = "Results_K_Folds6.RData")
+#list.filter(Something, "result" %in% period & n > 50)
+#save(starting.values, file="fname.RData")
 toc()
 
 
