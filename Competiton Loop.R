@@ -279,7 +279,7 @@ Mean_Accuracy <- function(y, error) {
     AMPE = abs(Mean_Percentage_Error(y, error)),
     MAPE = Mean_Absolute_Percentage_Error(y, error),
     MASE = Mean_Absolute_Scaled_Error(y, error),
-    sMAPE = Mean_Symmetric_Absolute_Percentage_Error(y, error),
+    AsMAPE = abs(Mean_Symmetric_Absolute_Percentage_Error(y, error)),
     AMRE = abs(Mean_Random_Error(y,error))
   )
   colnames(Mean_Accracy_Results) <- "Averaged_Time"
@@ -294,7 +294,7 @@ CV_Mean_Accuracy <- function(y, error) {
     AMPE = abs(CV_Mean_Percentage_Error(y, error)),
     MAPE = CV_Mean_Absolute_Percentage_Error(y, error),
     MASE = CV_Mean_Absolute_Scaled_Error(y, error),
-    sMAPE = CV_Mean_Symmetric_Absolute_Percentage_Error(y, error),
+    AsMAPE = abs(CV_Mean_Symmetric_Absolute_Percentage_Error(y, error)),
     AMRE = abs(CV_Mean_Random_Error(y,error))
   )
   colnames(CV_Mean_Accuracy_Results) <- colnames(error)
@@ -329,7 +329,7 @@ Both_Accuracies <- function(y, error) {
 # List Manipulation and Inversion --------------------------------------------------------
 Invert_List_Accuracy <- function(Accuracy) {
   
-  ifelse(Accuracy !=0,1/Accuracy,0.0001) 
+  ifelse(Accuracy !=0,1/Accuracy,100000L) 
   
 }
 
@@ -814,12 +814,7 @@ Forecast_Functions <- list(
   "Auto_Arima"      =     AR,
   "Tbats"           =     TB,
   "ETS"             =     ET,
-  "Neural_Network"  =     NN,
-  "Seasonal_AR"     =     SA,
-  "Seasonal_ETS"    =     SE,
-  "Thetha"          =     TH,
-  "Randon_Walk"     =     RW,
-  "Seasonal_Naive"  =     SN)
+  "Thetha"          =     TH)
 
 List_Forecasts <- Forecast_Saver(y,Forecast_Functions,h)
 
@@ -895,10 +890,48 @@ return(Bonsai)
 
 #save(Something3,file = "Results_K_Folds6.RData")
 #list.filter(Something, "result" %in% period & n > 50)
-#save(starting.values, file="fname.RData")
+#save(SomethingTeste2, file="Teste_4Methods.RData")
 toc()
 
 
+bad_lengths <- map_lgl(SomethingTeste2, ~is.null(.x$error) == F)
+
+bad_techs <- SomethingTeste2 %>% 
+  discard(bad_lengths)
+
+Temp <- lapply(bad_techs, `[[`, 1)
+
+Results <- as.tibble(melt(Temp))
+
+
+colnames(Results) <- c("OS_Error_Type","Forecast_Horizon","Resultss","In_Sample_Error","Error_Type","Family_Method","Selection_Method","Weight_Scheme","Original_List")  
+
+Result6 <- Results %>% filter( OS_Error_Type == "Symmetric_Errors") %>%  group_by(
+  OS_Error_Type,
+  In_Sample_Error,
+  Error_Type,
+  Family_Method,
+  Selection_Method,
+  Weight_Scheme,
+) %>% summarise(Tester = mean(Resultss)) %>%  arrange(Tester)
+
+
+Result61 <- Results %>% filter( OS_Error_Type == "Scaled_Errors") %>%  group_by(
+  OS_Error_Type,
+  In_Sample_Error,
+  Error_Type,
+  Family_Method,
+  Selection_Method,
+  Weight_Scheme,
+) %>% summarise(Tester = mean(Resultss)) %>%  arrange(Tester)
 
 
 
+ResultMeta <- surveys_completseMEta %>%  group_by(
+  Period,
+  Method,
+) %>% 
+  summarise(MASE = mean(MASE),
+                sMAPE = mean(sMAPE)
+                ) %>%
+  arrange(MASE)
