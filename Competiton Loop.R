@@ -10,7 +10,7 @@ library(Mcomp)
 library(rlist)
 library(tictoc)
 library(reshape2)
-
+library(M4comp2018)
 # Use Forecast Functions --------------------------------------------------
 
 
@@ -752,12 +752,14 @@ Cross_Calculate_Errors_CV <- function(
   return(MatrixErrors)
 }
 
-
 # The M3 Results Function -------------------------------------------------
 toc()
 # Load Funtions from Testing File
+data(M4)
+SubsetM3 <- list.filter(M4,h == 18)
 
-SubsetM3 <- list.filter(M3, "MONTHLY" %in% period & n > 50 )
+
+
 
 # Do TCC --------------------------------------------------------------
 plan(multisession)
@@ -766,7 +768,7 @@ SomethingTeste2 <-  future_map(SubsetM3, safely(function(u) {
   
 y <- u$x
 xx<- u$xx
-h <- 18
+h <- u$h
 
 
 # Use Forecast Functions --------------------------------------------------
@@ -926,12 +928,17 @@ Result61 <- Results %>% filter( OS_Error_Type == "Scaled_Errors") %>%  group_by(
 ) %>% summarise(Tester = mean(Resultss)) %>%  arrange(Tester)
 
 
+Result_factor$In_Sample_Error <- as.factor(Result_factor$In_Sample_Error)
+Result_factor$Error_Type <- as.factor(Result_factor$Error_Type)
+Result_factor$Family_Method <- as.factor(Result_factor$Family_Method)
+Result_factor$Selection_Method <- as.factor(Result_factor$Selection_Method)
+Result_factor$In_Sample_Error <- as.factor(Result_factor$In_Sample_Error)
 
-ResultMeta <- surveys_completseMEta %>%  group_by(
-  Period,
-  Method,
-) %>% 
-  summarise(MASE = mean(MASE),
-                sMAPE = mean(sMAPE)
-                ) %>%
-  arrange(MASE)
+
+lmas <- lm(formula = Tester ~ In_Sample_Error + Error_Type + Family_Method + 
+     Selection_Method + Weight_Scheme, data = Result_factor)
+
+library(broom)
+tidy(lmas)
+glance(lmas)
+
