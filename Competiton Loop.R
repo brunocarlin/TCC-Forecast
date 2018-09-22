@@ -915,7 +915,11 @@ Result6 <- Results %>% filter( OS_Error_Type == "Symmetric_Errors") %>%  group_b
   Family_Method,
   Selection_Method,
   Weight_Scheme,
-) %>% summarise(Tester = mean(Resultss)) %>%  arrange(Tester)
+) %>% summarise(Tester = mean(Resultss)) %>%  
+  arrange(Tester) %>% 
+  ungroup(OS_Error_Type) %>% 
+  select(-OS_Error_Type)
+
 
 
 Result61 <- Results %>% filter( OS_Error_Type == "Scaled_Errors") %>%  group_by(
@@ -927,7 +931,7 @@ Result61 <- Results %>% filter( OS_Error_Type == "Scaled_Errors") %>%  group_by(
   Weight_Scheme,
 ) %>% summarise(Tester = mean(Resultss)) %>%  arrange(Tester)
 
-
+Result_factor <- Result6
 Result_factor$In_Sample_Error <- as.factor(Result_factor$In_Sample_Error)
 Result_factor$Error_Type <- as.factor(Result_factor$Error_Type)
 Result_factor$Family_Method <- as.factor(Result_factor$Family_Method)
@@ -935,10 +939,43 @@ Result_factor$Selection_Method <- as.factor(Result_factor$Selection_Method)
 Result_factor$In_Sample_Error <- as.factor(Result_factor$In_Sample_Error)
 
 
+summary(Result_factor$Tester)
+
 lmas <- lm(formula = Tester ~ In_Sample_Error + Error_Type + Family_Method + 
      Selection_Method + Weight_Scheme, data = Result_factor)
 
 library(broom)
-tidy(lmas)
-glance(lmas)
+library(assist)
 
+describe <- function(df,...)
+{
+  if (nargs() > 1) df = dplyr::select(df, ...)
+  df %>%
+    mutate_if(is.character, str_length) %>%
+    mutate_if( is.factor, as.numeric) %>%
+    mutate_if(is.logical, as.numeric) %>%
+    gather(var, value) %>%
+    mutate(na = 1 - is.na(value)) %>%
+    group_by(var) %>%
+    summarise(
+      média = mean(value, na.rm = TRUE),
+      désvio_padrão = sd(value, na.rm = TRUE),
+      min = min(value, na.rm = TRUE),
+      max = max(value, na.rm = TRUE),
+      med = quantile(value,na.rm = TRUE, probs = 0.5),
+      PQ = quantile(value,na.rm = TRUE, probs = 0.25),
+      TQ = quantile(value,na.rm = TRUE, probs = 0.75),
+      N = sum(na)
+    ) %>%
+    bind_cols( data_frame(type =map(df, function(x)stringr::str_c("<",type_sum(x),">")) )) %>%
+    select(var, type, N, everything()) %>%
+    mutate_if(is.numeric, ~ round(.x , digits = 3) ) %>%
+    as.data.frame()
+}
+
+Summary3 <- as.tibble(describe(Result_factor))
+Coeficients <- tidy(lmas)
+Sumarrise2 <- glance(lmas)
+
+
+write.table(Result_factor, file = "olstab.txt", sep = ",", quote = FALSE, row.names = F)
